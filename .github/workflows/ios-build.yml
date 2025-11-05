@@ -1,0 +1,76 @@
+name: iOS Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Install dependencies
+      run: |
+        npm install --legacy-peer-deps
+        npm run build
+        
+    - name: Install Cocoapods
+      run: |
+        sudo gem install cocoapods
+        
+    - name: Setup Capacitor iOS
+      run: |
+        npx cap sync
+        cd ios/App
+        pod install
+        
+    - name: Install Apple Certificate
+      uses: apple-actions/import-codesign-certs@v1
+      with: 
+        p12-file-base64: ${{ secrets.IOS_CERTIFICATE }}
+        p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+        
+    - name: Install Provisioning Profile
+      uses: apple-actions/download-provisioning-profiles@v1
+      with:
+        bundle-id: 'com.base44.deliveryapp'
+        profile-type: 'IOS_APP_STORE'
+        issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+        api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
+        api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+        
+    - name: Build and Archive iOS App
+      run: |
+        cd ios/App
+        xcodebuild archive \
+          -workspace App.xcworkspace \
+          -scheme App \
+          -configuration Release \
+          -archivePath $RUNNER_TEMP/App.xcarchive \
+          CODE_SIGN_STYLE=Manual \
+          PROVISIONING_PROFILE="Base44 Delivery App Store Profile" \
+          CODE_SIGN_IDENTITY="Apple Distribution"
+          
+    - name: Export IPA
+      run: |
+        cd ios/App
+        xcodebuild -exportArchive \
+          -archivePath $RUNNER_TEMP/App.xcarchive \
+          -exportOptionsPlist App/exportOptions.plist \
+          -exportPath $RUNNER_TEMP/export
+          
+    - name: Upload to App Store
+      uses: apple-actions/upload-testflight-build@v1
+      with:
+        app-path: ${{ runner.temp }}/export/App.ipa
+        issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+        api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
+        api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
