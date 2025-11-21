@@ -1,8 +1,16 @@
 import { createClient } from '@base44/sdk';
-// import { getAccessToken } from '@base44/sdk/utils/auth-utils';
 
-// Create a client with authentication required
+const appId = (import.meta.env.VITE_BASE44_APP_ID || "").trim();
+const baseUrl = (import.meta.env.VITE_BASE44_API_URL || "https://api.base44.app").trim();
+
+if (!appId) {
+  const message = "[Base44] Missing VITE_BASE44_APP_ID. Add it to your .env.local to avoid 404s.";
+  console.error(message);
+  throw new Error(message);
+}
+
 export const base44 = createClient({
-  appId: "69082b33dba5279f76596e59", 
-  requiresAuth: true // Ensure authentication is required for all operations
+  appId,
+  baseUrl,
+  requiresAuth: true,
 });
