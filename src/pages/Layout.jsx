@@ -114,6 +114,8 @@ export default function Layout({ children, currentPageName }) {
   const secondaryRoles = currentUser?.secondary_roles || [];
   const isDemo = userRole === "demo";
 
+  const normalizePath = (path) => path === "/" ? "/" : path.replace(/\/+$/, '').toLowerCase();
+
   // Filter navigation items based on user role
   const navigationItems = Object.entries(pageAccessConfig)
     .filter(([pageName, config]) => {
@@ -185,8 +187,10 @@ export default function Layout({ children, currentPageName }) {
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton 
                           asChild 
-                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-xl mb-1 ${
-                            location.pathname === item.url ? 'bg-blue-600 text-white hover:bg-blue-700 hover:text-white shadow-md' : ''
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-xl mb-1 ${
+                            normalizePath(location.pathname) === normalizePath(item.url)
+                              ? 'bg-blue-600 text-white hover:bg-blue-700 hover:text-white shadow-md'
+                              : ''
                           }`}
                         >
                           <Link to={item.url} className="flex items-center gap-3 px-4 py-3">
